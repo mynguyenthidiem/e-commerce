@@ -17,8 +17,8 @@ export default function LoginPage() {
     const result = await login(values.email, values.password);
     setLoading(false);
     if (result.ok) {
-      if (result.roleName === 'Admin') navigate('/admin/dashboard');
-      else if (result.roleName === 'Staff') navigate('/staff/orders');
+      if (result.roleNames?.includes('Admin')) navigate('/admin/dashboard');
+      else if (result.roleNames?.includes('Staff')) navigate('/staff/orders');
       else navigate('/');
     } else {
       setError(result.message);

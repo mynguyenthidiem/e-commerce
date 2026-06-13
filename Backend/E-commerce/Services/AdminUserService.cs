@@ -58,7 +58,7 @@ namespace E_commerce.Services
                 PhoneNumber = dto.PhoneNumber.Trim(),
                 Password = BCrypt.Net.BCrypt.HashPassword(dto.Password),
                 FullName = dto.Name.Trim(),
-                RoleId = role.Id
+                UserRoles = new List<UserRole> { new UserRole { RoleId = role.Id } }
             };
 
             await _userRepository.AddAsync(user);

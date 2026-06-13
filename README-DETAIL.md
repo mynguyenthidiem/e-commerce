@@ -1,7 +1,7 @@
 # E-Commerce — Tài liệu chi tiết tính năng
 
 > **Mục đích:** File này là bản ghi đầy đủ về kiến trúc và tính năng của toàn bộ project (backend + frontend). Đọc file này thay vì quét lại codebase.
-> **Cập nhật lần cuối:** 2026-06-01
+> **Cập nhật lần cuối:** 2026-06-13
 
 ---
 
@@ -66,8 +66,8 @@ Frontend/E-commerce/src/
 | Address | string? | |
 | CreatedDate | DateTime | |
 | totalSpend | decimal(18,2) | Tổng chi tiêu |
-| RoleId | Guid | FK → Role |
 | IsDeleted | bool | Soft delete |
+| → UserRoles | 1:N | Many-to-many với Role qua bảng UserRole |
 
 ### Role
 | Id (seed) | Name |
@@ -75,6 +75,14 @@ Frontend/E-commerce/src/
 | 00000000-0000-0000-0000-000000000001 | Admin |
 | 00000000-0000-0000-0000-000000000002 | Staff |
 | 00000000-0000-0000-0000-000000000003 | Customer |
+
+### UserRole *(mới)*
+| Field | Type | Ghi chú |
+|---|---|---|
+| UserId | Guid | PK (composite), FK → User |
+| RoleId | Guid | PK (composite), FK → Role |
+
+> Bảng join many-to-many giữa User và Role. Composite PK là `(UserId, RoleId)`. Cho phép 1 user có nhiều role đồng thời.
 
 ### Product
 | Field | Type | Ghi chú |
@@ -312,7 +320,7 @@ Frontend/E-commerce/src/
 | DELETE | /api/cart/remove?productVariantId= | Required | Xóa 1 item |
 | DELETE | /api/cart | Required | Xóa toàn bộ giỏ |
 
-**CartItemDto fields:** Id, ProductVariantId, **ProductId** *(thêm mới)*, ProductName, ProductVariantName, Price, Quantity
+**CartItemDto fields:** Id, ProductVariantId, **ProductId**, ProductName, ProductVariantName, Price, Quantity, **ThumbnailUrl** *(mới — ảnh đầu tiên của sản phẩm từ ProductImages)*
 
 ---
 
@@ -499,8 +507,19 @@ Frontend/E-commerce/src/
 - `iss`: "ECommerceAPI"
 - `email`: email user
 - `nameid` (ClaimTypes.NameIdentifier): UserId (Guid)
-- `role`: tên role (Admin / Staff / Customer)
+- `role`: **mỗi role 1 claim riêng** — user có N roles → N claim `role` trong token
 - `exp`: hết hạn sau 60 phút
+
+**Login Response — `data` object:**
+```json
+{
+  "email": "user@example.com",
+  "name": "username",
+  "roleNames": ["Staff"],
+  "token": "eyJ..."
+}
+```
+> `roleNames` là **array**, thay cho `roleName` (string đơn) trước đây. Frontend kiểm tra bằng `.includes('Admin')`.
 
 **Lưu ý quan trọng:** Token JWT là snapshot tại thời điểm login. Nếu dùng token cũ (trước khi sửa code), `GetUserId()` có thể trả null → crash 500. Fix: logout → login lại để lấy token mới.
 
@@ -556,7 +575,7 @@ Frontend/E-commerce/src/
 **GlobalExceptionMiddleware:**
 - 401 status code → JSON `{"message": "Unauthorized. Please login first."}`
 - 403 status code → JSON `{"message": "You do not have permission..."}`
-- Unhandled exception → 500 với `ex.Message`
+- Unhandled exception → 500; trả `ex.Message` khi `IsDevelopment()`, trả `"An unexpected error occurred."` khi production
 
 ---
 
@@ -619,7 +638,7 @@ Cần `ThenInclude(p => p.ProductImages)` để `ImageUrl` trong `OrderDetailRes
 - **Không có rate limiting**
 - **Không có caching** (Redis hay in-memory)
 - **Cloudinary credentials trong appsettings** — nên dùng user-secrets hoặc env vars
-- **CORS AllowAll** — không phù hợp cho production
+- **CORS** — Development dùng `AllowAll`, Production dùng `AllowFrontend` (chỉ cho phép `http://localhost:5173`; cần cập nhật origin khi deploy)
 - **StaffController** — đã thêm `[Authorize(Roles = "Admin")]` ở class level
 - **XSS** — đã triển khai Security Headers Middleware (xem mục 17)
 
@@ -644,7 +663,7 @@ Tự động đính kèm các HTTP security headers vào mọi response:
 | `X-Frame-Options` | `DENY` | Chặn nhúng trang vào iframe (Clickjacking) |
 | `X-XSS-Protection` | `1; mode=block` | Bật bộ lọc XSS của trình duyệt cũ |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | Giới hạn thông tin referrer |
-| `Content-Security-Policy` | `default-src 'self'; img-src 'self' https://res.cloudinary.com` | Chỉ cho phép tài nguyên từ nguồn tin cậy |
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://res.cloudinary.com; font-src 'self'` | Chỉ cho phép tài nguyên từ nguồn tin cậy (bỏ qua với `/swagger`) |
 
 Middleware đăng ký trong `Program.cs` sau `GlobalExceptionMiddleware`.
 
@@ -758,3 +777,84 @@ docker-compose down -v
 - **VNPay IPN** vẫn cần ngrok khi test trong Docker
 - **Sau `docker-compose down -v`**: volume bị xóa, phải restore lại `.bak` từ đầu
 - **Chia sẻ cho người khác**: gửi kèm file `Database/ECommerceDB_Official.bak`
+
+---
+
+## 18. Multi-Role Authorization *(mới)*
+
+### Thiết kế
+
+Thay vì lưu `RoleId` trực tiếp trên bảng `Users`, hệ thống dùng bảng join `UserRoles` theo mô hình **many-to-many**:
+
+```
+User ──< UserRoles >── Role
+```
+
+Một user có thể được gán nhiều role đồng thời (ví dụ: vừa Admin vừa Staff).
+
+### Thay đổi Backend
+
+**Models:**
+- `User.cs` — xóa `RoleId`, thêm `ICollection<UserRole> UserRoles`
+- `Role.cs` — đổi `ICollection<User> Users` → `ICollection<UserRole> UserRoles`
+- `UserRole.cs` *(mới)* — composite PK `(UserId, RoleId)`
+
+**AppDbContext:**
+- Thêm `DbSet<UserRole> UserRoles`
+- Xóa config FK cũ `User → RoleId`
+- Thêm config composite key và FK cho `UserRole`
+
+**JwtService:** Dùng `foreach` để thêm 1 claim `role` cho mỗi role của user:
+```csharp
+foreach (var ur in user.UserRoles)
+    claims.Add(new Claim(ClaimTypes.Role, ur.Role?.Name ?? "Customer"));
+```
+ASP.NET Core tự xử lý multi-role claim với `[Authorize(Roles = "Admin")]`.
+
+**LoginResponse:** Đổi `RoleName: string` → `RoleNames: List<string>`
+
+**Các service cập nhật:** LoginService, StaffService, RegisterService, AdminUserService, AdminService, UserRepository, StaffRepository — tất cả đổi từ `.Include(u => u.Role)` sang `.Include(u => u.UserRoles).ThenInclude(ur => ur.Role)`.
+
+### Thay đổi Frontend
+
+| File | Thay đổi |
+|---|---|
+| `AuthContext.jsx` | `roleName` → `roleNames` (array), `isAdmin/isStaff/isCustomer` dùng `.includes()` |
+| `AdminLayout.jsx` | Check `user.roleNames?.includes('Admin')` |
+| `StaffLayout.jsx` | Check `user.roleNames?.includes('Staff')` + fix bug `user.role` → `user.roleName` |
+| `LoginPage.jsx` | Redirect dựa trên `result.roleNames?.includes(...)` |
+| `ProductDetailPage.jsx` | Check `user.roleNames?.includes('Customer')` để cho phép review |
+| `Navbar.jsx` | Hiển thị Admin/Staff Panel dựa trên `roleNames` |
+
+### Migration dữ liệu cũ
+
+Sau khi chạy `dotnet ef database update`, cần chuyển dữ liệu role cũ:
+```sql
+-- Gán tất cả user hiện tại về Customer
+INSERT INTO UserRoles (UserId, RoleId)
+SELECT Id, '00000000-0000-0000-0000-000000000003'
+FROM Users
+WHERE Id NOT IN (SELECT UserId FROM UserRoles);
+
+-- Cập nhật đúng role cho admin/staff theo email
+UPDATE UserRoles
+SET RoleId = '00000000-0000-0000-0000-000000000001'
+WHERE UserId = (SELECT Id FROM Users WHERE Email = 'admin@example.com');
+```
+
+---
+
+## 19. Giao diện — Cập nhật mới *(mới)*
+
+### Ảnh sản phẩm trong Cart & Checkout
+
+**Vấn đề:** CartPage và CheckoutPage hiển thị placeholder emoji thay vì ảnh thật.
+
+**Fix:**
+- `CartItemDto` thêm field `ThumbnailUrl` — lấy từ `ProductImages.FirstOrDefault()?.ImageUrl`
+- `CartService.GetCartAsync()` thêm `.ThenInclude(p => p.ProductImages)` vào query
+- `CartPage.jsx` và `CheckoutPage.jsx` render `<img>` nếu `thumbnailUrl` tồn tại, fallback về emoji nếu không có
+
+### Sidebar Admin & Staff
+
+- Thêm nút **Trang chủ** (link về `/`) phía trên nút Đăng xuất trong cả `AdminSidebar.jsx` và `StaffSidebar.jsx`

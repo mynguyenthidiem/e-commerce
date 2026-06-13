@@ -24,15 +24,15 @@ export function AuthProvider({ children }) {
 
       const res = await authApi.login({ email, password });
 
-      const { token, name, roleName } = res.data;
+      const { token, name, roleNames } = res.data;
 
-      const userData = { name, email, roleName };
+      const userData = { name, email, roleNames };
 
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(userData));
 
       setUser(userData);
-      return { ok: true, roleName };
+      return { ok: true, roleNames };
     } catch (err) {
       return { ok: false, message: err.response?.data?.message || 'Đăng nhập thất bại' };
     }
@@ -60,9 +60,9 @@ export function AuthProvider({ children }) {
       login,
       logout,
       register,
-      isAdmin: user?.roleName === 'Admin',
-      isStaff: user?.roleName === 'Staff',
-      isCustomer: user?.roleName === 'Customer'
+      isAdmin: user?.roleNames?.includes('Admin') ?? false,
+      isStaff: user?.roleNames?.includes('Staff') ?? false,
+      isCustomer: user?.roleNames?.includes('Customer') ?? false,
     }}>
       {children}
     </AuthContext.Provider>

@@ -21,15 +21,11 @@ namespace E_commerce.Models
         public DateTime CreatedDate { get; set; } = DateTime.Now;
         [Column(TypeName = "decimal(18,2)"), Range(0,double.MaxValue)]
         public decimal totalSpend { get; set; } = 0;
-        public Guid RoleId { get; set; }
-
         public bool IsDeleted { get; set; } = false;
-
-        [ForeignKey("RoleId")]
-        public virtual Role? Role { get; set; }
 
         public virtual Cart Cart { get; set; }
 
+        public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
         public virtual ICollection<SupportRequest> SupportRequests { get; set; } = new List<SupportRequest>();
 
 

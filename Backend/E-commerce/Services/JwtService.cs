@@ -18,8 +18,10 @@ namespace E_commerce.Services
             {
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Role, user.Role?.Name ?? "Customer")
             };
+
+            foreach (var ur in user.UserRoles)
+                claims.Add(new Claim(ClaimTypes.Role, ur.Role?.Name ?? "Customer"));
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature);

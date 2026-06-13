@@ -216,8 +216,11 @@ export default function CheckoutPage() {
               <div className="flex flex-col gap-3 mb-4">
                 {checkoutItems.map(item => (
                   <div key={item.id} className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded bg-gray-100 flex-shrink-0 flex items-center justify-center text-gray-400">
-                      🛍️
+                    <div className="w-10 h-10 rounded bg-gray-100 flex-shrink-0 overflow-hidden">
+                      {item.thumbnailUrl
+                        ? <img src={item.thumbnailUrl} alt={item.productName} className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center text-gray-400">🛍️</div>
+                      }
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{item.productName || item.productVariantName}</p>

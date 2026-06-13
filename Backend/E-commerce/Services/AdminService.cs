@@ -20,15 +20,16 @@ namespace E_commerce.Services
         public async Task<IEnumerable<UserListResponseDto>> GetUsersByRoleAsync(string roleName)
         {
             return await _context.Users
-                .Include(u => u.Role)
-                .Where(u => u.Role.Name == roleName)
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .Where(u => u.UserRoles.Any(ur => ur.Role.Name == roleName))
                 .Select(u => new UserListResponseDto
                 {
                     Id = u.Id,
                     FullName = u.FullName,
                     Email = u.Email,
                     PhoneNumber = u.PhoneNumber,
-                    RoleName = u.Role.Name
+                    RoleName = u.UserRoles.Select(ur => ur.Role.Name).FirstOrDefault() ?? ""
                 })
                 .ToListAsync();
         }

@@ -56,6 +56,8 @@ namespace E_commerce.Models
 
         [ForeignKey("VoucherId")]
         public Voucher? Voucher { get; set; }
+        public DateTime? PaymentExpiredAt { get; set; }
+
     }
 
     public enum OrderStatus

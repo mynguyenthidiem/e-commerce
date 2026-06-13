@@ -40,6 +40,8 @@ namespace E_commerce.Controllers
                 ipAddress
             );
 
+            await _orderService.SetPaymentExpiry(request.OrderId, DateTime.UtcNow.AddMinutes(15));
+
             return Ok(BaseResponse<string>.Ok(url));
         }
 

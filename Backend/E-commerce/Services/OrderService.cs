@@ -95,71 +95,83 @@ namespace E_commerce.Services
                 if (voucher.UsedCount >= voucher.TotalQuantity)
                     throw new InvalidOperationException("Voucher has been fully used.");
             }
-
-            decimal subTotal = 0;
-            var itemSnapshots = new List<(ProductVariant variant, int quantity, decimal price)>();
-
-            foreach (var item in orderItems)
+            Order? order = null;
+            await using var transaction = await _context.Database
+                .BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead);
+            try
             {
-                var variant = await _variantRepo.GetById(item.ProductVariantId);
-                if (variant == null) throw new KeyNotFoundException($"Variant {item.ProductVariantId} not found.");
 
-                if (variant.Quantity < item.Quantity) // này là order lớn hơn trữ lượng đang có
-                    throw new InvalidOperationException(
-                        $"Insufficient products for order. '{variant.Name}' only has {variant.Quantity} in stock.");
+                    decimal subTotal = 0;
+                    var itemSnapshots = new List<(ProductVariant variant, int quantity, decimal price)>();
 
-                subTotal += variant.Price * item.Quantity;
-                itemSnapshots.Add((variant, item.Quantity, variant.Price));
+                    foreach (var item in orderItems)
+                    {
+                        var variant = await _variantRepo.GetById(item.ProductVariantId);
+                        if (variant == null) throw new KeyNotFoundException($"Variant {item.ProductVariantId} not found.");
 
-            }
+                        if (variant.Quantity < item.Quantity) // này là order lớn hơn trữ lượng đang có
+                            throw new InvalidOperationException(
+                                $"Insufficient products for order. '{variant.Name}' only has {variant.Quantity} in stock.");
 
-            if (voucher != null && subTotal < voucher.MinOrderAmount)
-                throw new InvalidOperationException(
-                    $"Order total must be at least {voucher.MinOrderAmount:C} to use this voucher.");
+                        subTotal += variant.Price * item.Quantity;
+                        itemSnapshots.Add((variant, item.Quantity, variant.Price));
 
-            decimal discount = 0;
-            if (voucher != null)
-            {
-                discount = voucher.DiscountType == DiscountType.Percentage
-                    ? Math.Min(subTotal * voucher.DiscountValue / 100m, voucher.MaxDiscountAmount)
-                    : Math.Min(voucher.DiscountValue, subTotal);
+                    }
 
-                voucher.UsedCount++;
-            }
-            var details = new List<OrderDetail>();
-            foreach (var (variant, quantity, price) in itemSnapshots)
-            {
-                variant.Quantity -= quantity;
-                details.Add(new OrderDetail
+                    if (voucher != null && subTotal < voucher.MinOrderAmount)
+                        throw new InvalidOperationException(
+                            $"Order total must be at least {voucher.MinOrderAmount:C} to use this voucher.");
+
+                    decimal discount = 0;
+                    if (voucher != null)
+                    {
+                        discount = voucher.DiscountType == DiscountType.Percentage
+                            ? Math.Min(subTotal * voucher.DiscountValue / 100m, voucher.MaxDiscountAmount)
+                            : Math.Min(voucher.DiscountValue, subTotal);
+
+                        voucher.UsedCount++;
+                    }
+                    var details = new List<OrderDetail>();
+                    foreach (var (variant, quantity, price) in itemSnapshots)
+                    {
+                        variant.Quantity -= quantity;
+                        details.Add(new OrderDetail
+                        {
+                            ProductVariantId = variant.Id,
+                            OrderQuantity = quantity,
+                            UnitPrice = price
+                        });
+                    }
+
+                    order = new Order
+                    {
+                        UserId          = userId,
+                        ReceiverName    = addr.FullName,
+                        ReceiverPhone   = addr.PhoneNumber,
+                        ShippingAddress = $"{addr.Street}, {addr.Ward}, {addr.District}, {addr.Province}",
+                        PaymentMethodId = request.PaymentMethodId,
+                        VoucherId = voucher?.Id,
+                        SubTotal = subTotal,
+                        DiscountAmount = discount,
+                        TotalAmount = subTotal - discount,
+                        OrderDetails = details
+                    };
+
+                    await _orderRepo.AddOrder(order);
+                    await _orderRepo.SaveChanges();
+                    await transaction.CommitAsync();
+                }
+                catch
                 {
-                    ProductVariantId = variant.Id,
-                    OrderQuantity = quantity,
-                    UnitPrice = price
-                });
-            }
-
-            var order = new Order
-            {
-                UserId          = userId,
-                ReceiverName    = addr.FullName,
-                ReceiverPhone   = addr.PhoneNumber,
-                ShippingAddress = $"{addr.Street}, {addr.Ward}, {addr.District}, {addr.Province}",
-                PaymentMethodId = request.PaymentMethodId,
-                VoucherId = voucher?.Id,
-                SubTotal = subTotal,
-                DiscountAmount = discount,
-                TotalAmount = subTotal - discount,
-                OrderDetails = details
-            };
-
-            await _orderRepo.AddOrder(order);
-            await _orderRepo.SaveChanges();
+                    await transaction.RollbackAsync();
+                    throw;
+                }
 
             await _notificationService.CreateAsync(new CreateNotificationRequest
             {
                 UserId = userId,
                 Title = "Đặt hàng thành công",
-                Message = $"Đơn hàng của bạn đã được xác nhận. Mã đơn: {order.Id}",
+                Message = $"Đơn hàng của bạn đã được xác nhận. Mã đơn: {order!.Id}",
                 Type = "ORDER_CONFIRMED"
             });
 
@@ -246,6 +258,14 @@ namespace E_commerce.Services
                 Message = $"Đơn hàng {orderId} của bạn đã được hủy thành công.",
                 Type = "ORDER_CANCELLED"
             });
+        }
+
+        public async Task SetPaymentExpiry(Guid orderId, DateTime expiredAt)
+        {
+            var order = await _orderRepo.GetById(orderId)
+                ?? throw new KeyNotFoundException("Order not found.");
+            order.PaymentExpiredAt = expiredAt;
+            await _orderRepo.SaveChanges();
         }
 
         private static OrderResponse MapToResponse(Order order) => new OrderResponse()

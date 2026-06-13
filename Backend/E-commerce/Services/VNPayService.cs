@@ -21,19 +21,19 @@ namespace E_commerce.Services
                 { "vnp_Version",     "2.1.0" },
                 { "vnp_Command",     "pay" },
                 { "vnp_TmnCode",     _config["VNPay:TmnCode"]! },
-                { "vnp_Amount",      ((long)(amount * 100)).ToString() },
+                { "vnp_Amount",      ((long)(amount * 100)).ToString() }, //Tính theo đơn vị nhỏ nhất 
                 { "vnp_CreateDate",  vnNow.ToString("yyyyMMddHHmmss") },
                 { "vnp_CurrCode",    "VND" },
                 { "vnp_IpAddr",      ipAddress },
                 { "vnp_Locale",      "vn" },
                 { "vnp_OrderInfo",   orderInfo },
                 { "vnp_OrderType",   "other" },
-                { "vnp_ReturnUrl",   _config["VNPay:ReturnUrl"]! },
-                { "vnp_TxnRef",      orderId.ToString() },
-                { "vnp_ExpireDate",  vnNow.AddMinutes(15).ToString("yyyyMMddHHmmss") },
+                { "vnp_ReturnUrl",   _config["VNPay:ReturnUrl"]! }, // chỗ redirect user sau khi đã thanh toán xong
+                { "vnp_TxnRef",      orderId.ToString() }, // Mã tham chiếu giao dịch, dùng để map lại khi IPN về
+                { "vnp_ExpireDate",  vnNow.AddMinutes(15).ToString("yyyyMMddHHmmss") }, // Thời gian link hết hạn thanh toán
             };
 
-            // Dùng URL-encoded cho cả hash lẫn URL (theo VNPay official sample)
+            // encode từng thành phần, nối thành chuỗi
             var queryString = string.Join("&",
                 vnpay.Select(kv => $"{kv.Key}={WebUtility.UrlEncode(kv.Value)}"));
 
@@ -46,7 +46,7 @@ namespace E_commerce.Services
         {
             transactionStatus = query["vnp_TransactionStatus"].ToString();
 
-            var receivedHash = query["vnp_SecureHash"].ToString();
+            var receivedHash = query["vnp_SecureHash"].ToString(); // lấy hash VNPay được gửi kèm về
 
             // Lấy tất cả params TRỪ vnp_SecureHash, sort và nối lại
             var filtered = query

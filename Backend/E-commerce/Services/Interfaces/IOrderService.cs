@@ -10,5 +10,6 @@ namespace E_commerce.Services.Interfaces
         Task<OrderResponse> CreateOrder(Guid userId, CreateOrderRequest request);
         Task<OrderResponse> UpdateStatus(Guid id, UpdateOrderStatusRequest request);
         Task CancelOrder(Guid orderId, Guid userId);
+        Task SetPaymentExpiry(Guid orderId, DateTime expiredAt);
     }
 }

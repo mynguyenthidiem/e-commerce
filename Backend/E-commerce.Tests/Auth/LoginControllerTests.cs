@@ -25,7 +25,7 @@ namespace E_commerce.Tests.Auth
                 Data = new LoginResponse
                 {
                     Email = dto.Email,
-                    RoleName = "Customer",
+                    RoleNames = new List<string> { "Customer" },
                     Token = "jwt-token"
                 }
             };

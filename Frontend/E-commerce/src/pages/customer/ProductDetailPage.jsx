@@ -49,7 +49,7 @@ export default function ProductDetailPage() {
   }, [id]);
 
   useEffect(() => {
-    if (!id || user?.roleName !== 'Customer') { setCanReview(false); return; }
+    if (!id || !user?.roleNames?.includes('Customer')) { setCanReview(false); return; }
     reviewApi.canReview(id)
       .then(res => setCanReview(res.data?.canReview ?? false))
       .catch(() => setCanReview(false));

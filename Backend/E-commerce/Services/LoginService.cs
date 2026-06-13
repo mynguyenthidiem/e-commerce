@@ -1,4 +1,4 @@
-﻿using E_commerce.Data;
+using E_commerce.Data;
 using E_commerce.DTOs.Login;
 using E_commerce.Repositories;
 using E_commerce.Repositories.Interfaces;
@@ -17,7 +17,7 @@ namespace E_commerce.Services
         {
             _userRepository = userRepository;
             _jwtService = jwtService;
-        }   
+        }
 
         public async Task<ServiceResponse<LoginResponse>> LoginAsync(LoginRequestDTO dto)
         {
@@ -36,7 +36,7 @@ namespace E_commerce.Services
             {
                 Email = user.Email,
                 Name = user.Name,
-                RoleName = user.Role?.Name ?? "Customer",
+                RoleNames = user.UserRoles.Select(ur => ur.Role?.Name ?? "Customer").ToList(),
                 Token = _jwtService.CreateToken(user)
             };
             response.IsSuccess = true;
