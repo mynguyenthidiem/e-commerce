@@ -24,6 +24,7 @@ namespace E_commerce.Data
         public DbSet<SupportRequest> SupportRequests { get; set; }
         public DbSet<ShippingAddress> ShippingAddresses { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<UserRole> UserRoles { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -42,12 +43,6 @@ namespace E_commerce.Data
                 .WithOne(c => c.User)
                 .HasForeignKey<Cart>(c => c.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<User>()
-                .HasOne(u => u.Role)
-                .WithMany(r => r.Users)
-                .HasForeignKey(ui => ui.RoleId)
-                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<CartItem>()
                 .HasOne(ci => ci.Cart)
@@ -170,6 +165,18 @@ namespace E_commerce.Data
                 new Role { Id = Guid.Parse("00000000-0000-0000-0000-000000000003"), Name = "Customer" }
             );
 
-        }
+            modelBuilder.Entity<UserRole>()
+                .HasKey(ur => new { ur.UserId, ur.RoleId });
+
+            modelBuilder.Entity<UserRole>()
+                .HasOne(ur => ur.User)
+                .WithMany(u => u.UserRoles)
+                .HasForeignKey(ur => ur.UserId);
+
+            modelBuilder.Entity<UserRole>()
+                .HasOne(ur => ur.Role)
+                .WithMany(r => r.UserRoles)
+                .HasForeignKey(ur => ur.RoleId);
+                }
     }
 }

@@ -12,6 +12,6 @@ namespace E_commerce.Models
         [StringLength(50)]
         public string Name { get; set; } = null!;
 
-        public virtual ICollection<User> Users { get; set; } = new List<User>();
+        public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
     }
 }

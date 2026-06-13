@@ -18,7 +18,8 @@ namespace E_commerce.Repositories
         {
             // Dùng cho Login để tìm User và kiểm tra mật khẩu
             return await _context.Users
-                .Include(u => u.Role)
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync(u => u.Email == email && !u.IsDeleted);
         }
 
@@ -58,7 +59,8 @@ namespace E_commerce.Repositories
         public async Task<User?> GetByIdAsync(Guid id)
         {
             return await _context.Users
-                .Include(u => u.Role)
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted);
         }
     }

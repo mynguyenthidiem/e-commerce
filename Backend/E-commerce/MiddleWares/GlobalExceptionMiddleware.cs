@@ -8,11 +8,13 @@ namespace E_commerce.Middlewares
     {
         private readonly RequestDelegate _next;
         private readonly ILogger<GlobalExceptionMiddleware> _logger;
+        private readonly IWebHostEnvironment _env;
 
-        public GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExceptionMiddleware> logger)
+        public GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExceptionMiddleware> logger, IWebHostEnvironment env)
         {
             _next = next;
             _logger = logger;
+            _env = env;
         }
 
         public async Task InvokeAsync(HttpContext context)
@@ -53,12 +55,13 @@ namespace E_commerce.Middlewares
     }
         }
 
-        private static async Task HandleExceptionAsync(HttpContext context, Exception ex)
+        private async Task HandleExceptionAsync(HttpContext context, Exception ex)
         {
             context.Response.ContentType = "application/json";
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            var message = _env.IsDevelopment() ? ex.Message : "An unexpected error occurred.";
+            var response = BaseResponse<object>.Fail(message, 500);
 
-            var response = BaseResponse<object>.Fail(ex.Message, 500);
             var json = JsonSerializer.Serialize(response, new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase

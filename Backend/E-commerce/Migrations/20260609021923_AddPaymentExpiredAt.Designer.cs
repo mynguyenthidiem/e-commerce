@@ -4,6 +4,7 @@ using E_commerce.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace E_commerce.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260609021923_AddPaymentExpiredAt")]
+    partial class AddPaymentExpiredAt
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -536,6 +539,9 @@ namespace E_commerce.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<decimal>("totalSpend")
                         .HasColumnType("decimal(18,2)");
 
@@ -545,22 +551,9 @@ namespace E_commerce.Migrations
                         .IsUnique()
                         .HasFilter("[IsDeleted] = 0");
 
-                    b.ToTable("Users");
-                });
-
-            modelBuilder.Entity("E_commerce.Models.UserRole", b =>
-                {
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("UserId", "RoleId");
-
                     b.HasIndex("RoleId");
 
-                    b.ToTable("UserRoles");
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("E_commerce.Models.Voucher", b =>
@@ -798,23 +791,15 @@ namespace E_commerce.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("E_commerce.Models.UserRole", b =>
+            modelBuilder.Entity("E_commerce.Models.User", b =>
                 {
                     b.HasOne("E_commerce.Models.Role", "Role")
-                        .WithMany("UserRoles")
+                        .WithMany("Users")
                         .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("E_commerce.Models.User", "User")
-                        .WithMany("UserRoles")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Role");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("E_commerce.Models.Brand", b =>
@@ -862,7 +847,7 @@ namespace E_commerce.Migrations
 
             modelBuilder.Entity("E_commerce.Models.Role", b =>
                 {
-                    b.Navigation("UserRoles");
+                    b.Navigation("Users");
                 });
 
             modelBuilder.Entity("E_commerce.Models.User", b =>
@@ -871,8 +856,6 @@ namespace E_commerce.Migrations
                         .IsRequired();
 
                     b.Navigation("SupportRequests");
-
-                    b.Navigation("UserRoles");
                 });
 
             modelBuilder.Entity("E_commerce.Models.Voucher", b =>

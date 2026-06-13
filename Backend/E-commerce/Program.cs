@@ -49,6 +49,7 @@ builder.Services.AddScoped<IStaffService, StaffService>();
 builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddHostedService<E_commerce.BackgroundServices.OrderExpiryService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<IVNPayService, VNPayService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
@@ -102,6 +103,11 @@ builder.Services.AddCors(options =>
             policy.AllowAnyOrigin()
                   .AllowAnyMethod()
                   .AllowAnyHeader());
+
+    options.AddPolicy("AllowFrontend", policy =>
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyMethod()
+              .AllowAnyHeader());
 });
 
 // Controllers
@@ -170,7 +176,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseCors("AllowAll");
+app.UseCors(app.Environment.IsDevelopment() ? "AllowAll" : "AllowFrontend");
 
 app.UseAuthentication();
 

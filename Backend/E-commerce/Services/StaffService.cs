@@ -1,4 +1,4 @@
-﻿using E_commerce.DTOs.Staff;
+using E_commerce.DTOs.Staff;
 using E_commerce.Models;
 using E_commerce.Repositories.Interfaces;
 using E_commerce.Services.Interfaces;
@@ -27,7 +27,7 @@ namespace E_commerce.Services
                 FullName = u.FullName,
                 PhoneNumber = u.PhoneNumber,
                 TotalSpend = u.totalSpend,
-                RoleName = u.Role.Name
+                RoleName = u.UserRoles.FirstOrDefault()?.Role?.Name ?? "Staff"
             }).ToList();
         }
 
@@ -35,9 +35,8 @@ namespace E_commerce.Services
         {
             var staff = await _staffRepository.GetStaffById(id);
             if (staff == null)
-            {
                 return null;
-            }
+
             return new StaffResponse
             {
                 Id = staff.Id,
@@ -45,9 +44,10 @@ namespace E_commerce.Services
                 FullName = staff.FullName,
                 PhoneNumber = staff.PhoneNumber,
                 TotalSpend = staff.totalSpend,
-                RoleName = staff.Role.Name
+                RoleName = staff.UserRoles.FirstOrDefault()?.Role?.Name ?? "Staff"
             };
         }
+
         public async Task<string> CreateStaff(CreateStaff staff)
         {
             var email = staff.Email.Trim().ToLower();
@@ -67,7 +67,10 @@ namespace E_commerce.Services
                 Email = email,
                 Password = BCrypt.Net.BCrypt.HashPassword(staff.Password),
                 PhoneNumber = staff.PhoneNumber,
-                RoleId = staffRole.Id
+                UserRoles = new List<UserRole>
+                {
+                    new UserRole { RoleId = staffRole.Id }
+                }
             };
 
             try
@@ -81,13 +84,13 @@ namespace E_commerce.Services
                 return "Email already exists";
             }
         }
-        public async Task<String> UpdateStaff(Guid id, UpdateStaff staff)
+
+        public async Task<string> UpdateStaff(Guid id, UpdateStaff staff)
         {
             var currentStaff = await _staffRepository.GetStaffById(id);
             if (currentStaff == null)
-            {
                 return "Staff not found";
-            }
+
             currentStaff.Name = staff.Name;
             currentStaff.FullName = staff.FullName;
             currentStaff.PhoneNumber = staff.PhoneNumber;
@@ -95,13 +98,13 @@ namespace E_commerce.Services
             await _staffRepository.SaveChanges();
             return "Updated successfully";
         }
+
         public async Task<string> DeleteStaff(Guid id)
         {
             var staff = await _staffRepository.GetStaffById(id);
             if (staff == null)
-            {
                 return "Staff not found";
-            }
+
             _staffRepository.DeleteStaff(staff);
             await _staffRepository.SaveChanges();
             return "Deleted successfully";

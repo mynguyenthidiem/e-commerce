@@ -1,4 +1,4 @@
-﻿using E_commerce.Data;
+using E_commerce.Data;
 using E_commerce.Models;
 using E_commerce.Repositories.Interfaces;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -16,12 +16,18 @@ namespace E_commerce.Repositories
 
         public async Task<List<User>> GetAllStaff()
         {
-            return await _context.Users.Include(u => u.Role).Where(u => u.Role.Name.ToLower() == "staff" && !u.IsDeleted).ToListAsync();
+            return await _context.Users
+                .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
+                .Where(u => u.UserRoles.Any(ur => ur.Role.Name.ToLower() == "staff") && !u.IsDeleted)
+                .ToListAsync();
         }
 
         public async Task<User?> GetStaffById(Guid id)
         {
-            return await _context.Users.Include(u => u.Role).Where(u => u.Role.Name.ToLower() == "staff" && !u.IsDeleted).FirstOrDefaultAsync(u => u.Id == id);
+            return await _context.Users
+                .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
+                .Where(u => u.UserRoles.Any(ur => ur.Role.Name.ToLower() == "staff") && !u.IsDeleted)
+                .FirstOrDefaultAsync(u => u.Id == id);
         }
 
         public async Task<bool> EmailExists(string email)
