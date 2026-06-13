@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 export default function AdminLayout() {
   const { user, authLoading } = useAuth();
   if (authLoading) return null;
-  if (!user || user.roleName !== 'Admin') return <Navigate to="/login" replace />;
+  if (!user || !user.roleNames?.includes('Admin')) return <Navigate to="/login" replace />;
 
   return (
     <div className="flex min-h-screen bg-gray-50">

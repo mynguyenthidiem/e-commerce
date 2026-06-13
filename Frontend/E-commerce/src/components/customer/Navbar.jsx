@@ -22,8 +22,8 @@ export default function Navbar() {
   const handleLogout = () => { logout(); navigate('/'); };
 
   const userMenuItems = [
-    ...(user?.roleName === 'Admin' ? [{ key: 'admin', label: <Link to="/admin/dashboard">Admin Panel</Link> }] : []),
-    ...(user?.roleName === 'Staff' ? [{ key: 'staff', label: <Link to="/staff/orders">Staff Panel</Link> }] : []),
+    ...(user?.roleNames?.includes('Admin') ? [{ key: 'admin', label: <Link to="/admin/dashboard">Admin Panel</Link> }] : []),
+    ...(user?.roleNames?.includes('Staff') ? [{ key: 'staff', label: <Link to="/staff/orders">Staff Panel</Link> }] : []),
     { key: 'account', label: <Link to="/account">Tài khoản</Link> },
     { key: 'orders', label: <Link to="/orders">Đơn hàng</Link> },
     { key: 'support', label: <Link to="/support">Hỗ trợ</Link> },

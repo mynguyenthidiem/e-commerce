@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 export default function StaffLayout() {
   const { user, authLoading } = useAuth();
   if (authLoading) return null;
-  if (!user || (user.roleName !== 'Staff' && user.role !== 'admin')) return <Navigate to="/login" replace />;
+  if (!user || !user.roleNames?.includes('Staff')) return <Navigate to="/login" replace />;
 
   return (
     <div className="flex min-h-screen bg-gray-50">

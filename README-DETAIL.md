@@ -1,7 +1,7 @@
 # E-Commerce — Tài liệu chi tiết tính năng
 
 > **Mục đích:** File này là bản ghi đầy đủ về kiến trúc và tính năng của toàn bộ project (backend + frontend). Đọc file này thay vì quét lại codebase.
-> **Cập nhật lần cuối:** 2026-06-01
+> **Cập nhật lần cuối:** 2026-06-08
 
 ---
 
@@ -556,7 +556,7 @@ Frontend/E-commerce/src/
 **GlobalExceptionMiddleware:**
 - 401 status code → JSON `{"message": "Unauthorized. Please login first."}`
 - 403 status code → JSON `{"message": "You do not have permission..."}`
-- Unhandled exception → 500 với `ex.Message`
+- Unhandled exception → 500; trả `ex.Message` khi `IsDevelopment()`, trả `"An unexpected error occurred."` khi production
 
 ---
 
@@ -619,7 +619,7 @@ Cần `ThenInclude(p => p.ProductImages)` để `ImageUrl` trong `OrderDetailRes
 - **Không có rate limiting**
 - **Không có caching** (Redis hay in-memory)
 - **Cloudinary credentials trong appsettings** — nên dùng user-secrets hoặc env vars
-- **CORS AllowAll** — không phù hợp cho production
+- **CORS** — Development dùng `AllowAll`, Production dùng `AllowFrontend` (chỉ cho phép `http://localhost:5173`; cần cập nhật origin khi deploy)
 - **StaffController** — đã thêm `[Authorize(Roles = "Admin")]` ở class level
 - **XSS** — đã triển khai Security Headers Middleware (xem mục 17)
 
@@ -644,7 +644,7 @@ Tự động đính kèm các HTTP security headers vào mọi response:
 | `X-Frame-Options` | `DENY` | Chặn nhúng trang vào iframe (Clickjacking) |
 | `X-XSS-Protection` | `1; mode=block` | Bật bộ lọc XSS của trình duyệt cũ |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | Giới hạn thông tin referrer |
-| `Content-Security-Policy` | `default-src 'self'; img-src 'self' https://res.cloudinary.com` | Chỉ cho phép tài nguyên từ nguồn tin cậy |
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://res.cloudinary.com; font-src 'self'` | Chỉ cho phép tài nguyên từ nguồn tin cậy (bỏ qua với `/swagger`) |
 
 Middleware đăng ký trong `Program.cs` sau `GlobalExceptionMiddleware`.
 

@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   DashboardOutlined, AppstoreOutlined, ShoppingCartOutlined,
   TeamOutlined, TagOutlined, GiftOutlined, BarChartOutlined,
-  CreditCardOutlined, UserAddOutlined, GlobalOutlined, LogoutOutlined,
+  CreditCardOutlined, UserAddOutlined, HomeOutlined, LogoutOutlined,
 } from '@ant-design/icons';
 
 const NAV = [
@@ -61,8 +61,14 @@ export default function AdminSidebar() {
           </div>
         </div>
         <button
+          onClick={() => navigate('/')}
+          className="w-full flex items-center gap-2 !text-white text-sm py-1.5 px-2 rounded hover:bg-gray-700 transition-colors mb-1"
+        >
+          <HomeOutlined /> Trang chủ
+        </button>
+        <button
           onClick={() => { logout(); navigate('/login'); }}
-          className="w-full flex items-center gap-2 !text-red-400 hover:text-red-300 text-sm py-1.5 px-2 rounded hover:bg-gray-800 transition-colors "
+          className="w-full flex items-center gap-2 !text-red-400 hover:text-red-300 text-sm py-1.5 px-2 rounded hover:bg-gray-800 transition-colors"
         >
           <LogoutOutlined /> Đăng xuất
         </button>
